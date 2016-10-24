@@ -1,93 +1,70 @@
 import os
-import discord
 import random
 from discord.ext import commands
 
-client = discord.Client()
+description = '''Fado's Discord Dice Bot'''
+
 bot = commands.Bot(command_prefix='.', description='')
 
 @bot.command()
-async def add(left : int, right : int):
-    """Adds two numbers together."""
-    await bot.say(left + right)
+async def roll(result : str, *args, **kwargs):
+    numberOfDice, numberOfSides = parse_dice(result)
+    output = ""
 
+    output += "[Rolling " + str(numberOfDice) + "d" + str(numberOfSides) + "] You rolled "
 
-@client.event
-async def on_read():
-    print("Logged in as ")
-    print(client.user.name)
-    print(client.user.id)
-    print("-------------")
-
-
-@client.event
-async def on_message(message):
-
-    if message.content.startswith('.roll'):
-        output = ""
-
-        try:
-            if len(message.content.split(' ')) == 2:
-                dice, numberOfDice, numberOfSides = parse_roll(message.content)
-
-                output += "[Rolling " + str(numberOfDice) + "d" + str(numberOfSides) + "] "
-                results, output = do_roll(output, numberOfDice, numberOfSides)
-
-            elif len(message.content.split(' ')) == 4:
-                successes = 0
-
-                dice, numberOfDice, numberOfSides = parse_roll(message.content)
-                difficulty = str(message.content).split(' ')[-1]
-
-                output += "[Rolling " + str(numberOfDice) + "d" + str(numberOfSides) + " vs " + difficulty + "] "
-                results, output = do_roll(output, numberOfDice, numberOfSides)
-
-                for roll in results:
-                    if roll >= int(difficulty):
-                        successes += 1
-                    if roll == 1:
-                        successes -= 1
-
-                if successes < 0:
-                    output += "Botch!"
-                else:
-                    output += "\n" + str(successes) + " successes."
-
-            await client.send_message(message.channel, output)
-
-        except ValueError as error:
-            await client.send_message(message.channel, error.args[0])
-
-
-def parse_roll(message):
-    dice = str(message).split(' ')[1]
     try:
-        numberOfDice = int(dice.lower().split('d')[0])
-        numberOfSides = int(dice.lower().split('d')[1])
-    except ValueError:
-        raise ValueError("Error. Some dice parameters might not have been numbers.")
+        results, output = do_roll(output, numberOfDice, numberOfSides)
+    except ValueError as e:
+        bot.say(e.args[0])
 
-    if numberOfDice > 100:
-        raise ValueError("Error. Someone tried to roll too many dice.")
+    if args:
+        if args[0] == "vs":
+            successes = 0
 
-    return dice, numberOfDice, numberOfSides
+            for result in results:
+                if result >= int(args[1]):
+                    successes += 1
+                if result == 1:
+                    successes -= 1
+
+            output += "\nDifficulty was " + str(args[1]) + " and you scored "
+            if successes < 0:
+                output += "a Botch!"
+            else:
+                output += str(successes) + " successes."
+
+        elif args[0] == "and" or args[2] == "and":
+            if args[1] == "total" or args[3] == "total":
+                total = 0
+                for result in results:
+                    total += result
+                output += "\n\nTotal is " + str(total) + "."
+
+    await bot.say(output)
+
+
+def parse_dice(dice : str):
+    return dice.split('d')[0], dice.split('d')[1]
 
 
 def do_roll(output, numberOfDice, numberOfSides):
     results = []
-    for i in range(0, numberOfDice):
-        roll = random.randint(1, numberOfSides)
-        results.append(roll)
-        output += str(roll) + " "
+    try:
+        for i in range(0, int(numberOfDice)):
+            roll = random.randint(1, int(numberOfSides))
+            results.append(roll)
+            output += str(roll)
+            if i < int(numberOfDice) - 1:
+                output += ", "
+        output += "."
+
+    except ValueError:
+        raise ValueError("Invalid input.")
 
     return results, output
 
-
 try:
-    client.run(os.environ['DISCORD_TOKEN'])
+    bot.run(os.environ['DISCORD_TOKEN'])
 except KeyError:
     print("Environment variable not found.")
-
-
-
-
