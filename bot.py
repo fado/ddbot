@@ -11,15 +11,15 @@ async def roll(result : str, *args, **kwargs):
     numberOfDice, numberOfSides = parse_dice(result)
     output = ""
 
-    output += "[Rolling " + str(numberOfDice) + "d" + str(numberOfSides) + "] You rolled "
-
     try:
+        output += "[Rolling " + str(numberOfDice) + "d" + str(numberOfSides) + "] You rolled "
         results, output = do_roll(output, numberOfDice, numberOfSides)
     except ValueError as e:
-        bot.say(e.args[0])
+        await bot.say("Error: " + str(e))
+        return
 
-    if args:
-        if args[0] == "vs":
+    for i in range(0, len(args)):
+        if args[i] == "vs":
             successes = 0
 
             for result in results:
@@ -33,13 +33,14 @@ async def roll(result : str, *args, **kwargs):
                 output += "a Botch!"
             else:
                 output += str(successes) + " successes."
-
-        elif args[0] == "and" or args[2] == "and":
-            if args[1] == "total" or args[3] == "total":
-                total = 0
-                for result in results:
-                    total += result
-                output += "\n\nTotal is " + str(total) + "."
+        try:
+            if args[i] == "and" and args[i + 1] == "total":
+                    total = 0
+                    for result in results:
+                        total += result
+                    output += "\n\nTotal is " + str(total) + "."
+        except IndexError:
+            await bot.say("Error: Invalid input, but I can roll your dice anyway.")
 
     await bot.say(output)
 
@@ -50,6 +51,10 @@ def parse_dice(dice : str):
 
 def do_roll(output, numberOfDice, numberOfSides):
     results = []
+
+    if int(numberOfDice) > 100:
+        raise ValueError("Too many dice. I will only roll up to 100 at a time.")
+
     try:
         for i in range(0, int(numberOfDice)):
             roll = random.randint(1, int(numberOfSides))
