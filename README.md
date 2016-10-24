@@ -1,0 +1,2 @@
+# ddbot
+Discord dice bot.
